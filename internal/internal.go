@@ -140,6 +140,7 @@ type Config struct {
 	DryRun           bool   `json:"dry-run"`
 	EnableReflection bool   `json:"enable-reflection"`
 	parsedQuery      ast.Body
+	Proto_descriptor string `json:"proto_descriptor"`
 }
 
 type envoyExtAuthzGrpcServer struct {
@@ -240,7 +241,7 @@ func (p *envoyExtAuthzGrpcServer) Check(ctx ctx.Context, req *ext_authz.CheckReq
 	input["parsed_path"] = parsedPath
 	input["parsed_query"] = parsedQuery
 
-	parsedBody, isBodyTruncated, err := getParsedBody(req, parsedPath)
+	parsedBody, isBodyTruncated, err := getParsedBody(req, parsedPath, p)
 	if err != nil {
 		return nil, err
 	}
@@ -619,7 +620,7 @@ func getParsedPathAndQuery(req *ext_authz.CheckRequest) ([]interface{}, map[stri
 	return parsedPathInterface, parsedQueryInterface, nil
 }
 
-func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}) (interface{}, bool, error) {
+func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *envoyExtAuthzGrpcServer) (interface{}, bool, error) {
 	body := req.GetAttributes().GetRequest().GetHttp().GetBody()
 	headers := req.GetAttributes().GetRequest().GetHttp().GetHeaders()
 
@@ -648,8 +649,7 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}) (inter
 				return nil, false, err
 			}
 		} else if strings.Contains(val, "application/grpc") {
-
-			err := getGRPCBody(rawbody, parsedPath, &data)
+			err := getGRPCBody(rawbody, parsedPath, &data, p)
 			if err != nil {
 				return nil, false, err
 			}
@@ -659,23 +659,23 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}) (inter
 	return data, false, nil
 }
 
-func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}) error {
+func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoyExtAuthzGrpcServer) error {
 
-	bytes, err := ioutil.ReadFile("grpcprotoset/data.protoset")
+	bytes, err := ioutil.ReadFile(p.cfg.Proto_descriptor) // ("grpcprotoset/data.protoset")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	var fileSet descriptor.FileDescriptorSet
 	if err := proto.Unmarshal(bytes, &fileSet); err != nil {
-		panic(err)
+		return err
 	}
 	fd, err := desc.CreateFileDescriptorFromSet(&fileSet)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	var inputType = ""
-	var packageName = fd.GetPackage()
+	inputType := ""
+	packageName := fd.GetPackage()
 
 	for _, v := range fd.GetServices() {
 		if v.GetName() == parsedPath[0] {
@@ -699,10 +699,12 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}) error {
 
 	jsonBody, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 
-	data = string(jsonBody)
+	if err := util.Unmarshal([]byte(jsonBody), &data); err != nil {
+		return err
+	}
 
 	return nil
 }

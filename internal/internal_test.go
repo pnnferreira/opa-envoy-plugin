@@ -1229,6 +1229,7 @@ func TestGetParsedBody(t *testing.T) {
 		want            interface{}
 		isBodyTruncated bool
 		err             error
+		grpcserver      *envoyExtAuthzGrpcServer
 	}{
 		"no_content_type":           {input: createCheckRequest(requestNoContentType), want: nil, isBodyTruncated: false, err: nil},
 		"content_type_text":         {input: createCheckRequest(requestContentTypeText), want: nil, isBodyTruncated: false, err: nil},
@@ -1247,7 +1248,7 @@ func TestGetParsedBody(t *testing.T) {
 
 			expectedArray := []interface{}{"hello", "opa"}
 
-			got, isBodyTruncated, err := getParsedBody(tc.input, expectedArray)
+			got, isBodyTruncated, err := getParsedBody(tc.input, expectedArray, tc.grpcserver)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("expected result: %v, got: %v", tc.want, got)
 			}
@@ -1277,7 +1278,9 @@ func TestGetParsedBody(t *testing.T) {
 
 	arrayy := []interface{}{"hello", "opa"}
 
-	_, _, err := getParsedBody(createCheckRequest(requestContentTypeJSONInvalid), arrayy)
+	grpcserver := testAuthzServer(&testPlugin{}, false)
+
+	_, _, err := getParsedBody(createCheckRequest(requestContentTypeJSONInvalid), arrayy, grpcserver)
 	if err == nil {
 		t.Fatal("Expected error but got nil")
 	}
