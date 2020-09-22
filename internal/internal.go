@@ -9,8 +9,9 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"github.com/open-policy-agent/opa/topdown"
 	"io"
+	"io/ioutil"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -18,11 +19,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/dynamic"
+	"github.com/open-policy-agent/opa/topdown"
+
 	ctx "golang.org/x/net/context"
 
 	ext_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	ext_authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
 	ext_type "github.com/envoyproxy/go-control-plane/envoy/type"
+	proto "github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/code"
@@ -233,7 +240,7 @@ func (p *envoyExtAuthzGrpcServer) Check(ctx ctx.Context, req *ext_authz.CheckReq
 	input["parsed_path"] = parsedPath
 	input["parsed_query"] = parsedQuery
 
-	parsedBody, isBodyTruncated, err := getParsedBody(req)
+	parsedBody, isBodyTruncated, err := getParsedBody(req, parsedPath)
 	if err != nil {
 		return nil, err
 	}
@@ -612,7 +619,7 @@ func getParsedPathAndQuery(req *ext_authz.CheckRequest) ([]interface{}, map[stri
 	return parsedPathInterface, parsedQueryInterface, nil
 }
 
-func getParsedBody(req *ext_authz.CheckRequest) (interface{}, bool, error) {
+func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}) (interface{}, bool, error) {
 	body := req.GetAttributes().GetRequest().GetHttp().GetBody()
 	headers := req.GetAttributes().GetRequest().GetHttp().GetHeaders()
 
@@ -632,6 +639,7 @@ func getParsedBody(req *ext_authz.CheckRequest) (interface{}, bool, error) {
 	}
 
 	var data interface{}
+	var rawbody []byte
 
 	if val, ok := headers["content-type"]; ok {
 		if strings.Contains(val, "application/json") {
@@ -639,10 +647,64 @@ func getParsedBody(req *ext_authz.CheckRequest) (interface{}, bool, error) {
 			if err != nil {
 				return nil, false, err
 			}
+		} else if strings.Contains(val, "application/grpc") {
+
+			err := getGRPCBody(rawbody, parsedPath, &data)
+			if err != nil {
+				return nil, false, err
+			}
 		}
 	}
 
 	return data, false, nil
+}
+
+func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}) error {
+
+	bytes, err := ioutil.ReadFile("grpcprotoset/data.protoset")
+	if err != nil {
+		panic(err)
+	}
+	var fileSet descriptor.FileDescriptorSet
+	if err := proto.Unmarshal(bytes, &fileSet); err != nil {
+		panic(err)
+	}
+	fd, err := desc.CreateFileDescriptorFromSet(&fileSet)
+	if err != nil {
+		panic(err)
+	}
+
+	var inputType = ""
+	var packageName = fd.GetPackage()
+
+	for _, v := range fd.GetServices() {
+		if v.GetName() == parsedPath[0] {
+			for _, z := range v.GetMethods() {
+				if z.GetName() == parsedPath[1] {
+					inputType = z.GetInputType().GetName()
+				}
+			}
+		}
+	}
+
+	messageName := fmt.Sprintf("%s.%s", packageName, inputType)
+
+	msgDesc := fd.FindMessage(messageName)
+
+	message := dynamic.NewMessage(msgDesc)
+
+	if err := proto.Unmarshal(in, message); err != nil {
+		log.Fatalln("Failed to parse:", err)
+	}
+
+	jsonBody, err := json.Marshal(message)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	data = string(jsonBody)
+
+	return nil
 }
 
 func stringPathToDataRef(s string) (r ast.Ref) {

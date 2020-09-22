@@ -1062,7 +1062,7 @@ func TestGetResponseHttpStatus(t *testing.T) {
 		t.Fatal("Expected error but got nil")
 	}
 
-	input["http_status"] = json.Number(301)
+	input["http_status"] = json.Number("301")
 	result, err = getResponseHTTPStatus(input)
 	if err == nil {
 		t.Fatal("Expected error but got nil")
@@ -1244,7 +1244,10 @@ func TestGetParsedBody(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, isBodyTruncated, err := getParsedBody(tc.input)
+
+			expectedArray := []interface{}{"hello", "opa"}
+
+			got, isBodyTruncated, err := getParsedBody(tc.input, expectedArray)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("expected result: %v, got: %v", tc.want, got)
 			}
@@ -1272,7 +1275,9 @@ func TestGetParsedBody(t *testing.T) {
 		}
 	  }`
 
-	_, _, err := getParsedBody(createCheckRequest(requestContentTypeJSONInvalid))
+	arrayy := []interface{}{"hello", "opa"}
+
+	_, _, err := getParsedBody(createCheckRequest(requestContentTypeJSONInvalid), arrayy)
 	if err == nil {
 		t.Fatal("Expected error but got nil")
 	}
