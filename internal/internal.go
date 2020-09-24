@@ -26,9 +26,9 @@ import (
 
 	ctx "golang.org/x/net/context"
 
-	ext_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	ext_authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
-	ext_type "github.com/envoyproxy/go-control-plane/envoy/type"
+	ext_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	ext_authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	ext_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	proto "github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -624,23 +624,23 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 	body := req.GetAttributes().GetRequest().GetHttp().GetBody()
 	headers := req.GetAttributes().GetRequest().GetHttp().GetHeaders()
 
-	if body == "" {
-		return nil, false, nil
-	}
+	//if body == "" {
+	//	return nil, false, nil
+	//}
 
-	if val, ok := headers["content-length"]; ok {
-		cl, err := strconv.ParseInt(val, 10, 64)
-		if err != nil {
-			return nil, false, err
-		}
-
-		if cl != -1 && cl > int64(len(body)) {
-			return nil, true, nil
-		}
-	}
+	//if val, ok := headers["content-length"]; ok {
+	//	cl, err := strconv.ParseInt(val, 10, 64)
+	//	if err != nil {
+	//		return nil, false, err
+	//	}
+	//	if cl != -1 && cl > int64(len(body)) {
+	//		return nil, true, nil
+	//	}
+	//}
 
 	var data interface{}
-	var rawbody []byte
+
+	//logrus.WithField("err", err).Fatal("parsed body.")
 
 	if val, ok := headers["content-type"]; ok {
 		if strings.Contains(val, "application/json") {
@@ -649,7 +649,11 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 				return nil, false, err
 			}
 		} else if strings.Contains(val, "application/grpc") {
+			//logrus.WithField("err", err).Fatal("grpc")
+			rawbody := req.GetAttributes().GetRequest().GetHttp().GetRawBody()
+			fmt.Println(parsedPath)
 			err := getGRPCBody(rawbody, parsedPath, &data, p)
+
 			if err != nil {
 				return nil, false, err
 			}
@@ -661,18 +665,38 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 
 func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoyExtAuthzGrpcServer) error {
 
-	bytes, err := ioutil.ReadFile(p.cfg.Proto_descriptor) // ("grpcprotoset/data.protoset")
+	logrus.Info("Listener readfile.")
+
+	//bytes, err := ioutil.ReadFile("grpcprotoset/data.protoset")
+	bytes, err := ioutil.ReadFile("/grpcprotoset/data.protoset")
 	if err != nil {
-		return err
+		if err != io.EOF {
+			log.Fatalf("Err %v\n read %v", err, bytes)
+		}
+		//return err
 	}
+
+	//bytes, err := ioutil.ReadAll(dc)
+	//if err != nil {
+	//	if err != io.EOF {
+	//		log.Fatalf("Err %v\n read %v", err, rb)
+	//	}
+	//}
+
+	logrus.Info("Listener readfile.990")
 	var fileSet descriptor.FileDescriptorSet
 	if err := proto.Unmarshal(bytes, &fileSet); err != nil {
 		return err
 	}
+
+	logrus.Info("Listener readfile.10")
+
 	fd, err := desc.CreateFileDescriptorFromSet(&fileSet)
 	if err != nil {
 		return err
 	}
+
+	logrus.Info("Listener readfile.11")
 
 	inputType := ""
 	packageName := fd.GetPackage()

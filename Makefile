@@ -16,7 +16,7 @@ DISABLE_CGO := CGO_ENABLED=0
 
 BIN := opa_envoy_$(GOOS)_$(GOARCH)
 
-REPOSITORY := openpolicyagent
+REPOSITORY := pnnferreira
 IMAGE := $(REPOSITORY)/opa
 
 ifeq ($(shell tty > /dev/null && echo 1 || echo 0), 1)

@@ -3,9 +3,12 @@ module github.com/open-policy-agent/opa-envoy-plugin
 go 1.12
 
 require (
-	github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473
+	github.com/cncf/udpa/go v0.0.0-20200909154343-1f710aca26a9 // indirect
+	//github.com/envoyproxy/go-control-plane v0.9.6
+	github.com/envoyproxy/go-control-plane v0.9.7-0.20200922151857-7e2c0d9681d7
+	//github.com/envoyproxy/go-control-plane v0.9.6
 	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/golang/protobuf v1.4.1
+	github.com/golang/protobuf v1.4.2
 	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/jhump/protoreflect v1.7.0
 	github.com/kr/pretty v0.1.0 // indirect

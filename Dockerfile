@@ -10,6 +10,8 @@ WORKDIR /app
 
 COPY opa_envoy_linux_GOARCH /app
 
+#COPY grpcprotoset/data.protoset /grpcprotoset/data.protoset
+
 ENTRYPOINT ["./opa_envoy_linux_GOARCH"]
 
 CMD ["run"]

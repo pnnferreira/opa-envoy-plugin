@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	ext_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	ext_authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
+	ext_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	ext_authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/open-policy-agent/opa/ast"
