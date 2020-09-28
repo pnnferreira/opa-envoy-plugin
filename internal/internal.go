@@ -7,12 +7,10 @@ package internal
 import (
 	"context"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -633,8 +631,6 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 
 	var data interface{}
 
-	logrus.Info("pBody")
-
 	if val, ok := headers["content-type"]; ok {
 		if strings.Contains(val, "application/json") {
 
@@ -659,8 +655,6 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 		} else if strings.Contains(val, "application/grpc") {
 			rawbody := req.GetAttributes().GetRequest().GetHttp().GetRawBody()
 
-			logrus.Info(len(rawbody))
-			logrus.Info(len(parsedPath))
 			if len(rawbody) <= 0 {
 				return nil, false, nil
 			}
@@ -668,7 +662,7 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 			if len(parsedPath) < 1 {
 				return nil, false, nil
 			}
-			logrus.Info("pbBody")
+
 			err := getGRPCBody(rawbody, parsedPath, &data, p)
 			if err != nil {
 				return nil, false, err
@@ -683,8 +677,6 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 
 	// the first 5 bytes represent the body lenght. We need to remove them to be able to parse
 	in1 := append(in[5:len(in)])
-
-	logrus.Info("asdasd")
 
 	bytes, err := ioutil.ReadFile(p.cfg.Proto_descriptor) // ("grpcprotoset/data.pb")
 	if err != nil {
@@ -707,84 +699,35 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 	pathService := strings.Replace(pathServiceRaw, packageName+".", "", 1)
 
 	for _, v := range fd.GetServices() {
-		//if v.GetName() == "ProtoServiceILoggingApplication" {
 		if v.GetName() == pathService {
 			for _, z := range v.GetMethods() {
 				if z.GetName() == parsedPath[1] {
-					//if z.GetName() == "Register" {
 					inputType = z.GetInputType().GetName()
 				}
 			}
 		}
 	}
 
-	logrus.Info(parsedPath)
-	logrus.Info(parsedPath[0])
-	logrus.Info(parsedPath[1])
-
-	logrus.Info("Listener readfile.00" + inputType)
-	logrus.Info("Listener readfile.00" + packageName)
-
 	messageName := fmt.Sprintf("%s.%s", packageName, inputType)
 
-	logrus.Info("Listener readfile.13")
 	msgDesc := fd.FindMessage(messageName)
 
-	logrus.Info("Listener readfile.14")
-
 	message := dynamic.NewMessage(msgDesc)
-	//
-	//msgBytes, err := Base64Decode(in)
-	//if err != nil {
-	//	fmt.Println(err)
-	//
-	//}
-	fmt.Println(msgDesc)
-	fmt.Println(message)
 
 	if err := proto.Unmarshal(in1, message); err != nil {
-		log.Fatalln("Failed to parse:", err)
+		return err
 	}
-
-	logrus.Info("Listener readfile.16")
-
-	//fmt.Println(in)
-
-	//str1 := []byte("CtYMCtMMCtAMZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKU1V6STFOaUlzSW5nMWRDSTZJbXBwWWs1aWEwWlRVMkp0ZUZCWmNrNDVRMFp4VW1zMFN6Um5keUlzSW10cFpDSTZJbXBwWWs1aWEwWlRVMkp0ZUZCWmNrNDVRMFp4VW1zMFN6Um5keUo5LmV5SmhkV1FpT2lKaGNHazZMeTh4TUdWaE1ERTVPUzFpT0RZMUxUUmxNVFl0T0daall5MDVOemhqWWpFMU9HVmhNRGtpTENKcGMzTWlPaUpvZEhSd2N6b3ZMM04wY3k1M2FXNWtiM2R6TG01bGRDODRPVFUzT0dJM1pTMWhORFZoTFRSaVpEa3RZVFEwTmkxbU9XRTRaVE5oT1ROaU5HSXZJaXdpYVdGMElqb3hOVGs1TlRVeU9EUXdMQ0p1WW1ZaU9qRTFPVGsxTlRJNE5EQXNJbVY0Y0NJNk1UVTVPVFUxTmpjME1Dd2lZV055SWpvaU1TSXNJbUZwYnlJNklrRlZVVUYxTHpoUlFVRkJRVGhOZVZkTlZuQTNPRUZIVXpaRE1GWjRLMmRoV0hnMVZrWkJNMHBzZDJWVlpVUnZVR3cyU1M5MVExUjJWakZ5TjNwVVUweEpkVXhpVEVWd1dVNDJibWdyUVhkT1RHaERUSEZKZW1GVVkzWllkbGhSVFc5QlBUMGlMQ0poYlhJaU9sc2ljSGRrSWwwc0ltRndjR2xrSWpvaU1UQmxZVEF4T1RrdFlqZzJOUzAwWlRFMkxUaG1ZMk10T1RjNFkySXhOVGhsWVRBNUlpd2lZWEJ3YVdSaFkzSWlPaUl4SWl3aVpXMWhhV3dpT2lKeWFXTmhjbVJ2TG1GdFlYSmhiRUJ6ZVhOdFlYUmphQzVqYjIwaUxDSnBaSEFpT2lKb2RIUndjem92TDNOMGN5NTNhVzVrYjNkekxtNWxkQzgwTm1FME1tTXdNaTB4T0dRMkxUUmpOVE10WVRNeU15MDNPREE1Tmpnek5UQTJNbUV2SWl3aWFYQmhaR1J5SWpvaU9EZ3VNVFUzTGpFM05DNHhNallpTENKdVlXMWxJam9pVW1sallYSmtieUJCYldGeVlXd2lMQ0p2YVdRaU9pSTJPV0V5TW1OaE1pMDFOMkkyTFRReE5UUXRPV1V4TXkweVpUaGxNR05oTmpWaVpEY2lMQ0p5YUNJNklqQXVRVkYzUVdadmRGaHBWbkZyTWxWMWExSjJiVzgwTm1zM1V6VnJRalpvUW14MVFscFBhamg1V0dwTVJsazJaMnROUVVoVkxpSXNJbkp2YkdWeklqcGJJbGR5YVhSbGNpSmRMQ0p6WTNBaU9pSlZjMlZ5TGt4dloybHVJaXdpYzNWaUlqb2lja3gxUlV0V1NXeG5VSFI1Y2psU05tbDBiVGhKVldOalJsSnlRV2RQTmxCcU5VdEtWMTlOZUZsMlVTSXNJblJwWkNJNklqZzVOVGM0WWpkbExXRTBOV0V0TkdKa09TMWhORFEyTFdZNVlUaGxNMkU1TTJJMFlpSXNJblZ1YVhGMVpWOXVZVzFsSWpvaWNtbGpZWEprYnk1aGJXRnlZV3hBYzNsemJXRjBZMmd1WTI5dElpd2lkWFJwSWpvaVRGaFpRazFwUmw5TVZYbDZVR2Q1VjAxSk9FNUJRU0lzSW5abGNpSTZJakV1TUNKOS5IVk9aSDJ3UXRMLUdaNDBOUmtHazFjMExpQkZpWXVlYUxVS3ViZTZMdlhZRnYwTEtxaGY5SC0zbmhkTFpmUEZpWnhPeUc3X0IwczdNSkYzYWlTeGdxWUZjSElEcmFVdVBFWHRFb3lfeXRxQ2x3VHBIUWVrS2hzaWdwMnBQQzN1eDR3QXRGWVFiaWJDSm1ldmt0MXdQSW9RaTRVUnl4SWQxVTBSdVd5VVhjN2ZxTXlJdUhENW04SW1NRmZvWDNHaVFqcGlxSjVZRUF2Mk9hbWJIQUU5a0FKTFJhV0N4TWtndzczQS1pRTJfQlhXQldXdkdZMU9PN2NYSlhfNFhlM0dORk4zWFhlbXFrZGNDOC1xczIyaEFjdEhBRkNad1VuQjR1cGpqYjJucnhSOVBQRHdHaWpfMTBTQTZxdkxDVTNTdmlpRUE3bUFaWEttbnJBdmhJZjlFLUESjgEKBgjWktn6BRISChBmNGRiYjNlZGQ3NjVmNjIwGhIKEDQzMjIyYzJkNTFhN2FiZTMiCAoGYWRmYWRmKgcKBUVSUk9SMgIICToGCgRUZXN0QggKBmFzZGFzZEoICgZhc2Rhc2RSKQonMjAyMDA0MTVUMDcyMzA2LTA3MDAgSU5GTyBJIGxpa2UgZG9udXRz")
-
-	//msgBytes, err := Base64Decode(str1)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-
-	//requestData := &pbLogging.ProtoSingleInputMessageLoggingRegisterDTO{}
-	//msgBytes := in1
-	//if err := proto.Unmarshal(msgBytes, requestData); err != nil {
-	//	log.Fatalln("Failed to parse address book:", err)
-	//}
 
 	jsonBody, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
 
-	logrus.Info("Listener readfile.17")
-
 	if err := util.Unmarshal([]byte(jsonBody), &data); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func Base64Decode(message []byte) (b []byte, err error) {
-	var l int
-	b = make([]byte, base64.StdEncoding.DecodedLen(len(message)))
-	l, err = base64.StdEncoding.Decode(b, message)
-	if err != nil {
-		return
-	}
-	return b[:l], nil
 }
 
 func stringPathToDataRef(s string) (r ast.Ref) {
