@@ -1062,7 +1062,7 @@ func TestGetResponseHttpStatus(t *testing.T) {
 		t.Fatal("Expected error but got nil")
 	}
 
-	input["http_status"] = json.Number("301")
+	input["http_status"] = json.Number("1")
 	result, err = getResponseHTTPStatus(input)
 	if err == nil {
 		t.Fatal("Expected error but got nil")
@@ -1231,6 +1231,15 @@ func TestGetParsedBody(t *testing.T) {
 		err             error
 		grpcserver      *envoyExtAuthzGrpcServer
 	}{
+		
+		"ConfigNotDefined"
+		"ParsedPathError"
+		"ParseFileError"
+		"ReadFileError"
+		"InValidRawBody"
+		"ValidPArsedMessage"
+
+
 		"no_content_type":           {input: createCheckRequest(requestNoContentType), want: nil, isBodyTruncated: false, err: nil},
 		"content_type_text":         {input: createCheckRequest(requestContentTypeText), want: nil, isBodyTruncated: false, err: nil},
 		"content_type_json_string":  {input: createCheckRequest(requestContentTypeJSONString), want: "foo", isBodyTruncated: false, err: nil},
@@ -1276,11 +1285,202 @@ func TestGetParsedBody(t *testing.T) {
 		}
 	  }`
 
-	arrayy := []interface{}{"hello", "opa"}
+	path := []interface{}{}
 
 	grpcserver := testAuthzServer(&testPlugin{}, false)
 
-	_, _, err := getParsedBody(createCheckRequest(requestContentTypeJSONInvalid), arrayy, grpcserver)
+	_, _, err := getParsedBody(createCheckRequest(requestContentTypeJSONInvalid), path, grpcserver)
+	if err == nil {
+		t.Fatal("Expected error but got nil")
+	}
+}
+
+func TestGetParsedBodygRPC(t *testing.T) {
+	//TODO Tests
+
+	RequestReadFile := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/grpc"
+			  },
+			  "body": "foo"
+			}
+		  }
+		}
+	  }`
+
+	requestContentTypegRPC := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/grpc"
+			  },
+			  "body": "foo"
+			}
+		  }
+		}
+	  }`
+
+	requestContentTypeJSONBoolean := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/json"
+			  },
+			  "body": "true"
+			}
+		  }
+		}
+	  }`
+
+	requestContentTypeJSONNumber := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/json"
+			  },
+			  "body": "42"
+			}
+		  }
+		}
+	  }`
+
+	requestContentTypeJSONNull := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/json"
+			  },
+			  "body": "null"
+			}
+		  }
+		}
+	  }`
+
+	requestContentTypeJSONObject := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/json"
+			  },
+			  "body": "{\"firstname\": \"foo\", \"lastname\": \"bar\"}"
+			}
+		  }
+		}
+	  }`
+
+	requestContentTypeJSONArray := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/json"
+			  },
+			  "body": "[\"hello\", \"opa\"]"
+			}
+		  }
+		}
+	  }`
+
+	requestEmptyContent := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/json"
+			  },
+			  "body": ""
+			}
+		  }
+		}
+	  }`
+
+	requestBodyTruncated := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/json",
+				"content-length": "1000"
+			  },
+			  "body": "true"
+			}
+		  }
+		}
+	  }`
+
+	expectedNumber := json.Number("42")
+
+	expectedObject := map[string]interface{}{}
+	expectedObject["firstname"] = "foo"
+	expectedObject["lastname"] = "bar"
+
+	expectedArray := []interface{}{"hello", "opa"}
+
+	tests := map[string]struct {
+		input           *ext_authz.CheckRequest
+		want            interface{}
+		isBodyTruncated bool
+		err             error
+		grpcserver      *envoyExtAuthzGrpcServer
+	}{
+		"ReadFile":           {input: createCheckRequest(requestNoContentType), want: nil, isBodyTruncated: false, err: nil},
+		"content_type_text":         {input: createCheckRequest(requestContentTypeText), want: nil, isBodyTruncated: false, err: nil},
+		"content_type_json_string":  {input: createCheckRequest(requestContentTypeJSONString), want: "foo", isBodyTruncated: false, err: nil},
+		"content_type_json_boolean": {input: createCheckRequest(requestContentTypeJSONBoolean), want: true, isBodyTruncated: false, err: nil},
+		"content_type_json_number":  {input: createCheckRequest(requestContentTypeJSONNumber), want: expectedNumber, isBodyTruncated: false, err: nil},
+		"content_type_json_null":    {input: createCheckRequest(requestContentTypeJSONNull), want: nil, isBodyTruncated: false, err: nil},
+		"content_type_json_object":  {input: createCheckRequest(requestContentTypeJSONObject), want: expectedObject, isBodyTruncated: false, err: nil},
+		"content_type_json_array":   {input: createCheckRequest(requestContentTypeJSONArray), want: expectedArray, isBodyTruncated: false, err: nil},
+		"empty_content":             {input: createCheckRequest(requestEmptyContent), want: nil, isBodyTruncated: false, err: nil},
+		"body_truncated":            {input: createCheckRequest(requestBodyTruncated), want: nil, isBodyTruncated: true, err: nil},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			expectedArray := []interface{}{"hello", "opa"}
+
+			got, isBodyTruncated, err := getParsedBody(tc.input, expectedArray, tc.grpcserver)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("expected result: %v, got: %v", tc.want, got)
+			}
+
+			if isBodyTruncated != tc.isBodyTruncated {
+				t.Fatalf("expected isBodyTruncated: %v, got: %v", tc.isBodyTruncated, got)
+			}
+
+			if err != tc.err {
+				t.Fatalf("expected error: %v, got: %v", tc.err, err)
+			}
+		})
+	}
+
+	requestContentTypeJSONInvalid := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/json"
+			  },
+			  "body": "[\"foo\" : 42}"
+			}
+		  }
+		}
+	  }`
+
+	path := []interface{}{}
+
+	grpcserver := testAuthzServer(&testPlugin{}, false)
+
+	_, _, err := getParsedBody(createCheckRequest(requestContentTypeJSONInvalid), path, grpcserver)
 	if err == nil {
 		t.Fatal("Expected error but got nil")
 	}

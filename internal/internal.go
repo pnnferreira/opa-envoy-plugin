@@ -670,7 +670,8 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 
 func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoyExtAuthzGrpcServer) error {
 
-	// the first 5 bytes represent the body lenght. We need to remove them to be able to parse
+	// the first 5 bytes are part of gRPC framing. We need to remove them to be able to parse
+	//https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 	in = in[5:]
 
 	if p.cfg.Proto_descriptor == "" {
