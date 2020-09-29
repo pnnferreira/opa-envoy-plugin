@@ -35,12 +35,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	//"google.golang.org/protobuf/proto"
-
 	proto "github.com/golang/protobuf/proto"
-
-	//pbLogging "github.com/pnnferreira/opagrpc/logging"
-	//proto "google.golang.org/protobuf/proto"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/metrics"
@@ -626,13 +621,14 @@ func getParsedPathAndQuery(req *ext_authz.CheckRequest) ([]interface{}, map[stri
 }
 
 func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *envoyExtAuthzGrpcServer) (interface{}, bool, error) {
-	body := req.GetAttributes().GetRequest().GetHttp().GetBody()
 	headers := req.GetAttributes().GetRequest().GetHttp().GetHeaders()
 
 	var data interface{}
 
 	if val, ok := headers["content-type"]; ok {
 		if strings.Contains(val, "application/json") {
+
+			body := req.GetAttributes().GetRequest().GetHttp().GetBody()
 
 			if body == "" {
 				return nil, false, nil
@@ -658,7 +654,6 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 			if len(rawbody) <= 0 {
 				return nil, false, nil
 			}
-
 			if len(parsedPath) < 1 {
 				return nil, false, nil
 			}
@@ -676,7 +671,11 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoyExtAuthzGrpcServer) error {
 
 	// the first 5 bytes represent the body lenght. We need to remove them to be able to parse
-	in1 := append(in[5:len(in)])
+	in = in[5:]
+
+	if p.cfg.Proto_descriptor == "" {
+		return nil
+	}
 
 	bytes, err := ioutil.ReadFile(p.cfg.Proto_descriptor) // ("grpcprotoset/data.pb")
 	if err != nil {
@@ -714,7 +713,7 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 
 	message := dynamic.NewMessage(msgDesc)
 
-	if err := proto.Unmarshal(in1, message); err != nil {
+	if err := proto.Unmarshal(in, message); err != nil {
 		return err
 	}
 
