@@ -140,7 +140,7 @@ type Config struct {
 	DryRun           bool   `json:"dry-run"`
 	EnableReflection bool   `json:"enable-reflection"`
 	parsedQuery      ast.Body
-	Proto_descriptor string `json:"proto_descriptor"`
+	ProtoDescriptor  string `json:"proto_descriptor"`
 }
 
 type envoyExtAuthzGrpcServer struct {
@@ -652,10 +652,10 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 			rawbody := req.GetAttributes().GetRequest().GetHttp().GetRawBody()
 
 			if len(rawbody) <= 0 {
-				return nil, false, nil
+				return "", false, fmt.Errorf("invalid raw body")
 			}
 			if len(parsedPath) < 1 {
-				return nil, false, nil
+				return nil, false, fmt.Errorf("invalid parsed Path")
 			}
 
 			err := getGRPCBody(rawbody, parsedPath, &data, p)
@@ -674,11 +674,11 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 	//https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 	in = in[5:]
 
-	if p.cfg.Proto_descriptor == "" {
+	if p.cfg.ProtoDescriptor == "" {
 		return nil
 	}
 
-	bytes, err := ioutil.ReadFile(p.cfg.Proto_descriptor) // ("grpcprotoset/data.pb")
+	bytes, err := ioutil.ReadFile(p.cfg.ProtoDescriptor) // ("grpcprotoset/data.pb")
 	if err != nil {
 		return err
 	}
