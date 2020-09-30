@@ -708,6 +708,10 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 		}
 	}
 
+	if packageName == "" || inputType == "" {
+		return nil
+	}
+
 	messageName := fmt.Sprintf("%s.%s", packageName, inputType)
 
 	msgDesc := fd.FindMessage(messageName)
