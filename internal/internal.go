@@ -674,20 +674,13 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 	//https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 	in = in[5:]
 
-	fmt.Println("error0")
 	if p == nil {
-		return fmt.Errorf("error")
+		return fmt.Errorf("envoyExtAuthzGrpcServer server not defined")
 	}
-
-	fmt.Println("error1")
 
 	if p.cfg.ProtoDescriptor == "" {
-		return fmt.Errorf("error1")
+		return fmt.Errorf("ProtoDescriptor path not defined")
 	}
-
-	fmt.Println("error2")
-
-	fmt.Println(p.cfg.ProtoDescriptor)
 
 	bytes, err := ioutil.ReadFile(p.cfg.ProtoDescriptor) //grpcprotoset/data.pb")
 	if err != nil {
@@ -695,21 +688,15 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 		return err
 	}
 
-	fmt.Println("error3")
-
 	var fileSet descriptor.FileDescriptorSet
 	if err := proto.Unmarshal(bytes, &fileSet); err != nil {
 		return err
 	}
 
-	fmt.Println("error4")
-
 	fd, err := desc.CreateFileDescriptorFromSet(&fileSet)
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("error5")
 
 	inputType := ""
 	packageName := fd.GetPackage()
@@ -727,10 +714,8 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 	}
 
 	if packageName == "" || inputType == "" {
-		return nil
+		return fmt.Errorf("InputType not defined")
 	}
-
-	fmt.Println("error6")
 
 	messageName := fmt.Sprintf("%s.%s", packageName, inputType)
 
@@ -750,9 +735,6 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 	if err := util.Unmarshal([]byte(jsonBody), &data); err != nil {
 		return err
 	}
-
-	fmt.Println(message)
-	fmt.Println(data)
 
 	return nil
 }

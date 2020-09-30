@@ -10,6 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.1
 	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/jhump/protoreflect v1.7.0
+	github.com/juju/testing v0.0.0-20200923013621-75df6121fbb0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/open-policy-agent/opa v0.23.2
@@ -20,9 +21,8 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20190706150252-9beb055b7962 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5 // indirect
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	google.golang.org/genproto v0.0.0-20200806141610-86f49bd18e98
 	google.golang.org/grpc v1.32.0
 	google.golang.org/protobuf v1.25.0
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 )
