@@ -1327,6 +1327,23 @@ func TestGetParsedBodygRPC(t *testing.T) {
 		}
 	  }`
 
+	requestInvalidParsedPathExample := `{
+		"attributes": {
+		  "request": {
+			"http": {
+			  "headers": {
+				"content-type": "application/grpc"
+			  },
+			  "method": "POST",
+			  "protocol": "HTTP/2",
+			  "raw_body": "AAAAAC0KDQoHCgVFUlJPUhICCAESHAoMCgpCb2R5IHZhbHVlEgwKCk5hbWUgVmFsdWU="
+			}
+		  },
+		  "parsed_path": [
+		  ]
+		}
+	  }`
+
 	//requestExample := ``
 
 	resultExample := ``
@@ -1334,8 +1351,6 @@ func TestGetParsedBodygRPC(t *testing.T) {
 	expectedObject := map[string]interface{}{}
 	expectedObject["firstname"] = "foo"
 	expectedObject["lastname"] = "bar"
-
-	//grpcserver.cfg.ProtoDescriptor
 
 	tests := map[string]struct {
 		input           *ext_authz.CheckRequest
@@ -1345,10 +1360,10 @@ func TestGetParsedBodygRPC(t *testing.T) {
 		grpcserver      *envoyExtAuthzGrpcServer
 	}{
 		//"config_not_defined":   {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
-		//"parsed_path_error":    {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
+		"parsed_path_error": {input: createCheckRequest(requestInvalidParsedPathExample), want: nil, isBodyTruncated: false, err: fmt.Errorf("invalid parsed path")},
 		//"parse_file_error":     {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
 		//"read_file_error":      {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
-		"without_raw_body":     {input: createCheckRequest(requestInvalidRawBodyExample), want: nil, isBodyTruncated: false, err: nil},
+		"without_raw_body":     {input: createCheckRequest(requestInvalidRawBodyExample), want: nil, isBodyTruncated: false, err: fmt.Errorf("invalid raw body")},
 		"valid_parsed_message": {input: createCheckRequest(requestValidExample), want: resultExample, isBodyTruncated: false, err: nil},
 	}
 
@@ -1357,6 +1372,7 @@ func TestGetParsedBodygRPC(t *testing.T) {
 
 			expectedArray := []interface{}{"hello", "opa"}
 
+			fmt.Println(tc)
 			got, isBodyTruncated, err := getParsedBody(tc.input, expectedArray, tc.grpcserver)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("expected result: %v, got: %v", tc.want, got)
@@ -1366,7 +1382,7 @@ func TestGetParsedBodygRPC(t *testing.T) {
 				t.Fatalf("expected isBodyTruncated: %v, got: %v", tc.isBodyTruncated, got)
 			}
 
-			if err != tc.err {
+			if err.Error() != tc.err.Error() {
 				t.Fatalf("expected error: %v, got: %v", tc.err, err)
 			}
 		})

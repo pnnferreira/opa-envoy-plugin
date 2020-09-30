@@ -652,10 +652,10 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 			rawbody := req.GetAttributes().GetRequest().GetHttp().GetRawBody()
 
 			if len(rawbody) <= 0 {
-				return "", false, fmt.Errorf("invalid raw body")
+				return nil, false, fmt.Errorf("invalid raw body")
 			}
 			if len(parsedPath) < 1 {
-				return nil, false, fmt.Errorf("invalid parsed Path")
+				return nil, false, fmt.Errorf("invalid parsed path")
 			}
 
 			err := getGRPCBody(rawbody, parsedPath, &data, p)
@@ -673,6 +673,10 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 	// the first 5 bytes are part of gRPC framing. We need to remove them to be able to parse
 	//https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 	in = in[5:]
+
+	if p == nil {
+		return nil
+	}
 
 	if p.cfg.ProtoDescriptor == "" {
 		return nil
