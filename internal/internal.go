@@ -654,7 +654,7 @@ func getParsedBody(req *ext_authz.CheckRequest, parsedPath []interface{}, p *env
 			if len(rawbody) <= 0 {
 				return nil, false, fmt.Errorf("invalid raw body")
 			}
-			if len(parsedPath) < 1 {
+			if len(parsedPath) <= 1 {
 				return nil, false, fmt.Errorf("invalid parsed path")
 			}
 
@@ -674,28 +674,42 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 	//https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 	in = in[5:]
 
+	fmt.Println("error0")
 	if p == nil {
-		return nil
+		return fmt.Errorf("error")
 	}
+
+	fmt.Println("error1")
 
 	if p.cfg.ProtoDescriptor == "" {
-		return nil
+		return fmt.Errorf("error1")
 	}
 
-	bytes, err := ioutil.ReadFile(p.cfg.ProtoDescriptor) // ("grpcprotoset/data.pb")
+	fmt.Println("error2")
+
+	fmt.Println(p.cfg.ProtoDescriptor)
+
+	bytes, err := ioutil.ReadFile(p.cfg.ProtoDescriptor) //grpcprotoset/data.pb")
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
+
+	fmt.Println("error3")
 
 	var fileSet descriptor.FileDescriptorSet
 	if err := proto.Unmarshal(bytes, &fileSet); err != nil {
 		return err
 	}
 
+	fmt.Println("error4")
+
 	fd, err := desc.CreateFileDescriptorFromSet(&fileSet)
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("error5")
 
 	inputType := ""
 	packageName := fd.GetPackage()
@@ -716,6 +730,8 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 		return nil
 	}
 
+	fmt.Println("error6")
+
 	messageName := fmt.Sprintf("%s.%s", packageName, inputType)
 
 	msgDesc := fd.FindMessage(messageName)
@@ -734,6 +750,9 @@ func getGRPCBody(in []byte, parsedPath []interface{}, data interface{}, p *envoy
 	if err := util.Unmarshal([]byte(jsonBody), &data); err != nil {
 		return err
 	}
+
+	fmt.Println(message)
+	fmt.Println(data)
 
 	return nil
 }

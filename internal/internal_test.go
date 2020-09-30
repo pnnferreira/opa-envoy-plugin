@@ -19,6 +19,9 @@ import (
 	ext_authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"google.golang.org/genproto/googleapis/rpc/code"
 
+	pbExample "opa-envoy-plugin/test/files"
+
+	wrappers "github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/plugins"
 	"github.com/open-policy-agent/opa/plugins/logs"
@@ -1298,7 +1301,7 @@ func TestGetParsedBodygRPC(t *testing.T) {
 			  "method": "POST",
 			  "path": "/Example.Test.GRPC.ProtoServiceIExampleApplication/RegisterExample",
 			  "protocol": "HTTP/2",
-			  "raw_body": "AAAAAC0KDQoHCgVFUlJPUhICCAESHAoMCgpCb2R5IHZhbHVlEgwKCk5hbWUgVmFsdWU="
+			  "raw_body": "AAAAAC4KDgoHCgVFUlJPUhIDCgExEhwKDAoKQm9keSB2YWx1ZRIMCgpOYW1lIFZhbHVl",
 			}
 		  },
 		  "parsed_path": [
@@ -1338,19 +1341,57 @@ func TestGetParsedBodygRPC(t *testing.T) {
 			  "protocol": "HTTP/2",
 			  "raw_body": "AAAAAC0KDQoHCgVFUlJPUhICCAESHAoMCgpCb2R5IHZhbHVlEgwKCk5hbWUgVmFsdWU="
 			}
-		  },
-		  "parsed_path": [
-		  ]
+		  }
 		}
 	  }`
 
-	//requestExample := ``
+	// expectedObject1 := map[string]interface{}{}
+	// expectedObject1["Body"] = "Body value"
+	// expectedObject1["Name"] = "Name Value"
 
-	resultExample := ``
+	// expectedObject2 := map[string]interface{}{}
+	// expectedObject2["SeverityNumber"] = 1
+	// expectedObject2["SeverityText"] = "ERROR"
 
-	expectedObject := map[string]interface{}{}
-	expectedObject["firstname"] = "foo"
-	expectedObject["lastname"] = "bar"
+	// expectedObject := map[string]interface{}{}
+	// expectedObject["Data"] = expectedObject1
+	// expectedObject["Metadata"] = expectedObject2
+
+	validObject := &pbExample.InputRegisterDTOExample{
+		Metadata: &pbExample.InputMetadataExample{
+			SeverityText: &wrappers.StringValue{
+				Value: "ERROR",
+			},
+			SeverityNumber: &wrappers.StringValue{
+				Value: "1",
+			},
+		},
+		Data: &pbExample.InputRegisterExample{
+			Body: &wrappers.StringValue{
+				Value: "Body value",
+			},
+			Name: &wrappers.StringValue{
+				Value: "Name Value",
+			},
+		},
+	}
+
+	var data interface{}
+
+	objectToValidate, err1 := json.Marshal(validObject)
+	if err1 != nil {
+		fmt.Println(err1)
+	}
+
+	if err1 := util.Unmarshal([]byte(objectToValidate), &data); err1 != nil {
+		fmt.Println(err1)
+	}
+
+	grpcserver := testAuthzServer(&testPlugin{}, false)
+
+	grpcserverWithConfig := testAuthzServer(&testPlugin{}, false)
+
+	grpcserverWithConfig.cfg.ProtoDescriptor = `..\test\files\example.pb`
 
 	tests := map[string]struct {
 		input           *ext_authz.CheckRequest
@@ -1359,21 +1400,26 @@ func TestGetParsedBodygRPC(t *testing.T) {
 		err             error
 		grpcserver      *envoyExtAuthzGrpcServer
 	}{
-		//"config_not_defined":   {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
-		"parsed_path_error": {input: createCheckRequest(requestInvalidParsedPathExample), want: nil, isBodyTruncated: false, err: fmt.Errorf("invalid parsed path")},
+		"parsed_path_error": {input: createCheckRequest(requestInvalidParsedPathExample), want: nil, isBodyTruncated: false, err: fmt.Errorf("invalid parsed path"), grpcserver: grpcserver},
+		"without_raw_body":  {input: createCheckRequest(requestInvalidRawBodyExample), want: nil, isBodyTruncated: false, err: fmt.Errorf("invalid raw body"), grpcserver: grpcserver},
+		//"config_not_defined": {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
+
 		//"parse_file_error":     {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
 		//"read_file_error":      {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
-		"without_raw_body":     {input: createCheckRequest(requestInvalidRawBodyExample), want: nil, isBodyTruncated: false, err: fmt.Errorf("invalid raw body")},
-		"valid_parsed_message": {input: createCheckRequest(requestValidExample), want: resultExample, isBodyTruncated: false, err: nil},
+
+		"valid_parsed_message": {input: createCheckRequest(requestValidExample), want: &data, isBodyTruncated: false, err: nil, grpcserver: grpcserverWithConfig},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 
-			expectedArray := []interface{}{"hello", "opa"}
+			parsedPath, parsedQuery, err := getParsedPathAndQuery(tc.input)
+			if err != nil {
+				t.Fatalf("expected error: %v, parsedQuery: %v", tc.err, parsedQuery)
+			}
 
-			fmt.Println(tc)
-			got, isBodyTruncated, err := getParsedBody(tc.input, expectedArray, tc.grpcserver)
+			got, isBodyTruncated, err := getParsedBody(tc.input, parsedPath, tc.grpcserver)
+
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("expected result: %v, got: %v", tc.want, got)
 			}
@@ -1403,7 +1449,7 @@ func TestGetParsedBodygRPC(t *testing.T) {
 
 	path := []interface{}{}
 
-	grpcserver := testAuthzServer(&testPlugin{}, false)
+	//grpcserver := testAuthzServer(&testPlugin{}, false)
 
 	_, _, err := getParsedBody(createCheckRequest(requestContentTypeJSONInvalid), path, grpcserver)
 	if err == nil {

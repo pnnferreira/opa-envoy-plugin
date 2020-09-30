@@ -24,14 +24,14 @@ Int32Value
 BytesValue
 value (RvalueB|
 com.google.protobufBWrappersProtoPZ*github.com/golang/protobuf/ptypes/wrappers¯¢GPB™Google.Protobuf.WellKnownTypesbproto3
-ñ
+ó
 Example.protoExample.Test.GRPCgoogle/protobuf/wrappers.proto"õ
 InputRegisterDTOExampleC
 Metadata (2'.Example.Test.GRPC.InputMetadataExampleRMetadata;
-Data (2'.Example.Test.GRPC.InputRegisterExampleRData"ù
+Data (2'.Example.Test.GRPC.InputRegisterExampleRData"û
 InputMetadataExample@
-SeverityText (2.google.protobuf.StringValueRSeverityTextC
-SeverityNumber (2.google.protobuf.Int32ValueRSeverityNumber"z
+SeverityText (2.google.protobuf.StringValueRSeverityTextD
+SeverityNumber (2.google.protobuf.StringValueRSeverityNumber"z
 InputRegisterExample0
 Body (2.google.protobuf.StringValueRBody0
 Name (2.google.protobuf.StringValueRName"ñ

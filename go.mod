@@ -7,6 +7,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.9.7-0.20200922151857-7e2c0d9681d7
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.2
+	github.com/google/go-cmp v0.5.1
 	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/jhump/protoreflect v1.7.0
 	github.com/kr/pretty v0.1.0 // indirect
