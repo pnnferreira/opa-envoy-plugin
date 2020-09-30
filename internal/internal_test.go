@@ -1231,15 +1231,6 @@ func TestGetParsedBody(t *testing.T) {
 		err             error
 		grpcserver      *envoyExtAuthzGrpcServer
 	}{
-		
-		"ConfigNotDefined"
-		"ParsedPathError"
-		"ParseFileError"
-		"ReadFileError"
-		"InValidRawBody"
-		"ValidPArsedMessage"
-
-
 		"no_content_type":           {input: createCheckRequest(requestNoContentType), want: nil, isBodyTruncated: false, err: nil},
 		"content_type_text":         {input: createCheckRequest(requestContentTypeText), want: nil, isBodyTruncated: false, err: nil},
 		"content_type_json_string":  {input: createCheckRequest(requestContentTypeJSONString), want: "foo", isBodyTruncated: false, err: nil},
@@ -1296,133 +1287,32 @@ func TestGetParsedBody(t *testing.T) {
 }
 
 func TestGetParsedBodygRPC(t *testing.T) {
-	//TODO Tests
 
-	RequestReadFile := `{
-		"attributes": {
+	requestExample := `{
+		"input": {
 		  "request": {
 			"http": {
 			  "headers": {
 				"content-type": "application/grpc"
 			  },
-			  "body": "foo"
+			  "method": "POST",
+			  "path": "/Example.Test.GRPC.ProtoServiceIExampleApplication/RegisterExample",
+			  "protocol": "HTTP/2",
+			  "raw_body": "AAAAAC0KDQoHCgVFUlJPUhICCAESHAoMCgpCb2R5IHZhbHVlEgwKCk5hbWUgVmFsdWU="
 			}
-		  }
+		  },
+		  "parsed_path": [
+			"Example.Test.GRPC.ProtoServiceIExampleApplication",
+			"RegisterExample"
+		  ]
 		}
 	  }`
-
-	requestContentTypegRPC := `{
-		"attributes": {
-		  "request": {
-			"http": {
-			  "headers": {
-				"content-type": "application/grpc"
-			  },
-			  "body": "foo"
-			}
-		  }
-		}
-	  }`
-
-	requestContentTypeJSONBoolean := `{
-		"attributes": {
-		  "request": {
-			"http": {
-			  "headers": {
-				"content-type": "application/json"
-			  },
-			  "body": "true"
-			}
-		  }
-		}
-	  }`
-
-	requestContentTypeJSONNumber := `{
-		"attributes": {
-		  "request": {
-			"http": {
-			  "headers": {
-				"content-type": "application/json"
-			  },
-			  "body": "42"
-			}
-		  }
-		}
-	  }`
-
-	requestContentTypeJSONNull := `{
-		"attributes": {
-		  "request": {
-			"http": {
-			  "headers": {
-				"content-type": "application/json"
-			  },
-			  "body": "null"
-			}
-		  }
-		}
-	  }`
-
-	requestContentTypeJSONObject := `{
-		"attributes": {
-		  "request": {
-			"http": {
-			  "headers": {
-				"content-type": "application/json"
-			  },
-			  "body": "{\"firstname\": \"foo\", \"lastname\": \"bar\"}"
-			}
-		  }
-		}
-	  }`
-
-	requestContentTypeJSONArray := `{
-		"attributes": {
-		  "request": {
-			"http": {
-			  "headers": {
-				"content-type": "application/json"
-			  },
-			  "body": "[\"hello\", \"opa\"]"
-			}
-		  }
-		}
-	  }`
-
-	requestEmptyContent := `{
-		"attributes": {
-		  "request": {
-			"http": {
-			  "headers": {
-				"content-type": "application/json"
-			  },
-			  "body": ""
-			}
-		  }
-		}
-	  }`
-
-	requestBodyTruncated := `{
-		"attributes": {
-		  "request": {
-			"http": {
-			  "headers": {
-				"content-type": "application/json",
-				"content-length": "1000"
-			  },
-			  "body": "true"
-			}
-		  }
-		}
-	  }`
-
-	expectedNumber := json.Number("42")
 
 	expectedObject := map[string]interface{}{}
 	expectedObject["firstname"] = "foo"
 	expectedObject["lastname"] = "bar"
 
-	expectedArray := []interface{}{"hello", "opa"}
+	//grpcserver.cfg.ProtoDescriptor
 
 	tests := map[string]struct {
 		input           *ext_authz.CheckRequest
@@ -1431,16 +1321,12 @@ func TestGetParsedBodygRPC(t *testing.T) {
 		err             error
 		grpcserver      *envoyExtAuthzGrpcServer
 	}{
-		"ReadFile":           {input: createCheckRequest(requestNoContentType), want: nil, isBodyTruncated: false, err: nil},
-		"content_type_text":         {input: createCheckRequest(requestContentTypeText), want: nil, isBodyTruncated: false, err: nil},
-		"content_type_json_string":  {input: createCheckRequest(requestContentTypeJSONString), want: "foo", isBodyTruncated: false, err: nil},
-		"content_type_json_boolean": {input: createCheckRequest(requestContentTypeJSONBoolean), want: true, isBodyTruncated: false, err: nil},
-		"content_type_json_number":  {input: createCheckRequest(requestContentTypeJSONNumber), want: expectedNumber, isBodyTruncated: false, err: nil},
-		"content_type_json_null":    {input: createCheckRequest(requestContentTypeJSONNull), want: nil, isBodyTruncated: false, err: nil},
-		"content_type_json_object":  {input: createCheckRequest(requestContentTypeJSONObject), want: expectedObject, isBodyTruncated: false, err: nil},
-		"content_type_json_array":   {input: createCheckRequest(requestContentTypeJSONArray), want: expectedArray, isBodyTruncated: false, err: nil},
-		"empty_content":             {input: createCheckRequest(requestEmptyContent), want: nil, isBodyTruncated: false, err: nil},
-		"body_truncated":            {input: createCheckRequest(requestBodyTruncated), want: nil, isBodyTruncated: true, err: nil},
+		"config_not_defined":   {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
+		"parsed_path_error":    {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
+		"parse_file_error":     {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
+		"read_file_error":      {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
+		"invalid_raw_body":     {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
+		"valid_parsed_message": {input: createCheckRequest(requestExample), want: nil, isBodyTruncated: false, err: nil},
 	}
 
 	for name, tc := range tests {
